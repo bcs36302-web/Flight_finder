@@ -181,21 +181,20 @@ export class FlightService {
 
   async fetchFlights(from: string, to: string, quarter: string, year: number): Promise<FlightData[]> {
     try {
-      const [amadeusFlights, kiwiFlights, travelpayoutsFlights, skyFareFlights] = await Promise.all([
+      const [amadeusFlights, kiwiFlights, travelpayoutsFlights] = await Promise.all([
         this.fetchAmadeusFlights(from, to, quarter, year),
         this.fetchKiwiFlights(from, to, quarter, year),
         this.fetchTravelpayoutsFlights(from, to, quarter, year),
-        this.fetchSkyFareFlights(from, to, quarter, year),
       ]);
 
-      const allFlights = [...amadeusFlights, ...kiwiFlights, ...travelpayoutsFlights, ...skyFareFlights];
+      const allFlights = [...amadeusFlights, ...kiwiFlights, ...travelpayoutsFlights];
 
       if (allFlights.length === 0) {
         console.log(`No flights found across all providers for ${from} -> ${to}. Using Smart Fallback...`);
         return this.getSmartFallbackFlights(from, to, quarter, year);
       }
 
-      // Deduplicate by flight_number
+      // Deduplicate by flight_number + departure
       const seen = new Set<string>();
       const unique = allFlights.filter(f => {
         const key = `${f.flight_number}-${f.departure}`;
@@ -235,14 +234,20 @@ export class FlightService {
       console.log(`[Travelpayouts] Results: ${data?.length || 0}`);
       if (!data || data.length === 0) return [];
 
-      return data.map((f: any) => ({
-        airline: getAirlineName(f.gate || ''),
-        price: Math.round(f.value),
-        departure: f.depart_date || 'N/A',
-        arrival: 'N/A',
-        duration: 'N/A',
-        flight_number: `${f.gate || ''}`,
-      }));
+      return data
+        .filter((f: any) => f.airline && f.price > 0)
+        .map((f: any) => {
+          const airlineCode = (f.airline || '').toString().toUpperCase();
+          const flightNum = f.flight_number ? String(f.flight_number) : '';
+          return {
+            airline: getAirlineName(airlineCode),
+            price: Math.round(f.price),
+            departure: f.departure_at || 'N/A',
+            arrival: 'N/A',
+            duration: 'N/A',
+            flight_number: flightNum ? `${airlineCode} ${flightNum}` : airlineCode,
+          };
+        });
     } catch (error: any) {
       console.error('[Travelpayouts] Error:', error.response?.data || error.message);
       return [];
