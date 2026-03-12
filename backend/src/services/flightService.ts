@@ -31,7 +31,8 @@ export class FlightService {
       return this.accessToken;
     }
 
-    const { AMADEUS_API_KEY, AMADEUS_API_SECRET, AMADEUS_BASE_URL } = process.env;
+    const baseUrl = process.env.AMADEUS_BASE_URL?.trim() || 'https://test.api.amadeus.com';
+    const { AMADEUS_API_KEY, AMADEUS_API_SECRET } = process.env;
 
     if (!AMADEUS_API_KEY || !AMADEUS_API_SECRET) {
       throw new Error('Amadeus API credentials missing in environment');
@@ -39,11 +40,11 @@ export class FlightService {
 
     try {
       const response = await axios.post(
-        `${AMADEUS_BASE_URL}/v1/security/oauth2/token`,
+        `${baseUrl}/v1/security/oauth2/token`,
         new URLSearchParams({
           grant_type: 'client_credentials',
-          client_id: AMADEUS_API_KEY,
-          client_secret: AMADEUS_API_SECRET,
+          client_id: AMADEUS_API_KEY.trim(),
+          client_secret: AMADEUS_API_SECRET.trim(),
         }).toString(),
         {
           headers: {
@@ -62,7 +63,7 @@ export class FlightService {
   }
 
   private async fetchAmadeusFlights(from: string, to: string, quarter: string, year: number): Promise<FlightData[]> {
-    const { AMADEUS_BASE_URL } = process.env;
+    const baseUrl = process.env.AMADEUS_BASE_URL?.trim() || 'https://test.api.amadeus.com';
     try {
       const token = await this.getAccessToken();
       const quarterStartDates: Record<string, string> = {
@@ -76,7 +77,7 @@ export class FlightService {
 
       console.log(`[Amadeus] Searching ${from} -> ${to} on ${departureDate}`);
 
-      const response = await axios.get(`${AMADEUS_BASE_URL}/v2/shopping/flight-offers`, {
+      const response = await axios.get(`${baseUrl}/v2/shopping/flight-offers`, {
         params: {
           originLocationCode: from,
           destinationLocationCode: to,
