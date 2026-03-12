@@ -168,14 +168,15 @@ export class FlightService {
       const allFlights = [...amadeusFlights, ...kiwiFlights];
 
       if (allFlights.length === 0) {
-        return this.getMockFlights(from, to, quarter, year);
+        console.log(`No real flights found for ${from} -> ${to}.`);
+        return [];
       }
 
       console.log(`Search complete. Total flights found: ${allFlights.length}`);
       return allFlights;
     } catch (error: any) {
       console.error('Error in search:', error.message);
-      return this.getMockFlights(from, to, quarter, year);
+      return [];
     }
   }
 
