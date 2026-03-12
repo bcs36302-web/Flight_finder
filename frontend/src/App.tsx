@@ -6,12 +6,16 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://flight-finder-q
 interface Flight {
   airline: string;
   price: number;
-  percent_below: number;
-  flight_number?: string;
+  departure: string;
+  arrival: string;
+  duration: string;
+  flight_number: string;
+  percent_vs_avg: number;
 }
 
 interface SearchResults {
   average_price: number;
+  all_flights: Flight[];
   flights_below_average: Flight[];
 }
 
@@ -141,19 +145,32 @@ function App() {
               </div>
             </div>
 
-            {results.flights_below_average.length > 0 ? (
-              results.flights_below_average.map((flight, index) => (
-                <div key={index} className="flight-card" style={{ animationDelay: `${index * 0.1}s` }}>
+            {results.all_flights.length > 0 ? (
+              results.all_flights.map((flight, index) => (
+                <div key={index} className="flight-card" style={{animationDelay: `${index * 0.05}s`}}>
                   <div className="airline-info">
-                    <span className="airline-name">{flight.airline}</span>
-                    <span className="flight-details">Professional Route Optimization Active</span>
+                    <div className="airline-main">
+                      <span className="airline-name">{flight.airline}</span>
+                      <span className="flight-no">{flight.flight_number}</span>
+                    </div>
+                    <div className="flight-meta">
+                      <span>🕒 {formatDateTime(flight.departure)}</span>
+                      <span style={{margin: '0 0.5rem'}}>•</span>
+                      <span>⏳ {flight.duration}</span>
+                    </div>
                   </div>
                   <div className="price-info">
                     <div className="price-main">
                       ₹{flight.price.toLocaleString()}
-                      <span className="off-badge">{flight.percent_below}% BELOW AVG</span>
+                      {flight.percent_vs_avg < 0 ? (
+                        <span className="off-badge">{Math.abs(flight.percent_vs_avg)}% BELOW AVG</span>
+                      ) : (
+                        <span className="off-badge" style={{backgroundColor: 'rgba(239,68,68,0.15)', color: '#F87171', border: '1px solid rgba(239,68,68,0.3)'}}>
+                          {flight.percent_vs_avg}% ABOVE AVG
+                        </span>
+                      )}
                     </div>
-                    <span className="flight-details">Estimated Direct Booking Savings</span>
+                    <span className="flight-details">Direct Booking Available</span>
                   </div>
                 </div>
               ))
