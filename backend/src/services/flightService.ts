@@ -34,7 +34,7 @@ export class FlightService {
     const { AMADEUS_API_KEY, AMADEUS_API_SECRET, AMADEUS_BASE_URL } = process.env;
 
     if (!AMADEUS_API_KEY || !AMADEUS_API_SECRET) {
-      throw new Error('Amadeus API credentials missing in .env');
+      throw new Error('Amadeus API credentials missing in environment');
     }
 
     try {
@@ -53,7 +53,7 @@ export class FlightService {
       );
 
       this.accessToken = response.data.access_token;
-      this.tokenExpiry = now + response.data.expires_in * 1000 - 60000; // Expire 1 min early
+      this.tokenExpiry = now + response.data.expires_in * 1000 - 60000;
       return this.accessToken!;
     } catch (error: any) {
       console.error('Error fetching Amadeus access token:', error.response?.data || error.message);
@@ -74,6 +74,8 @@ export class FlightService {
 
       const departureDate = quarterStartDates[quarter] || `${year}-04-15`;
 
+      console.log(`[Amadeus] Searching ${from} -> ${to} on ${departureDate}`);
+
       const response = await axios.get(`${AMADEUS_BASE_URL}/v2/shopping/flight-offers`, {
         params: {
           originLocationCode: from,
@@ -88,8 +90,10 @@ export class FlightService {
         },
       });
 
+      console.log(`[Amadeus] Status: ${response.status}, Results: ${response.data.data?.length || 0}`);
+
       const offers = response.data.data;
-      if (!offers) return [];
+      if (!offers || offers.length === 0) return [];
 
       return offers.map((offer: any) => {
         const itinerary = offer.itineraries?.[0];
@@ -104,43 +108,48 @@ export class FlightService {
         };
       });
     } catch (error: any) {
-      console.error('Error in fetchAmadeusFlights:', error.response?.data || error.message);
+      console.error('[Amadeus] Error:', error.response?.data || error.message);
       return [];
     }
   }
 
-  async fetchKiwiFlights(from: string, to: string, quarter: string, year: number): Promise<FlightData[]> {
+  private async fetchKiwiFlights(from: string, to: string, quarter: string, year: number): Promise<FlightData[]> {
     const { KIWI_API_KEY, KIWI_BASE_URL } = process.env;
-    if (!KIWI_API_KEY || KIWI_API_KEY === 'your_kiwi_api_key_here') {
-      console.warn('Kiwi API key missing or default, skipping Kiwi search.');
+    if (!KIWI_API_KEY || KIWI_API_KEY.includes('your_')) {
       return [];
     }
 
     try {
-      const quarterStartDates: Record<string, string> = {
-        'Q1': `15/01/${year}`,
-        'Q2': `15/04/${year}`,
-        'Q3': `15/07/${year}`,
-        'Q4': `15/10/${year}`,
+      const quarterRanges: Record<string, { from: string, to: string }> = {
+        'Q1': { from: `01/01/${year}`, to: `31/03/${year}` },
+        'Q2': { from: `01/04/${year}`, to: `30/06/${year}` },
+        'Q3': { from: `01/07/${year}`, to: `30/09/${year}` },
+        'Q4': { from: `01/10/${year}`, to: `31/12/${year}` },
       };
-      const dateFrom = quarterStartDates[quarter] || `15/04/${year}`;
+      
+      const range = quarterRanges[quarter] || { from: `01/04/${year}`, to: `30/06/${year}` };
+
+      console.log(`[Kiwi] Searching ${from} -> ${to} range: ${range.from} - ${range.to}`);
 
       const response = await axios.get(`${KIWI_BASE_URL}/v2/search`, {
         params: {
           fly_from: from,
           fly_to: to,
-          date_from: dateFrom,
-          date_to: dateFrom,
+          date_from: range.from,
+          date_to: range.to,
           curr: 'INR',
-          limit: 10,
+          limit: 15,
+          sort: 'price',
         },
         headers: {
           apikey: KIWI_API_KEY,
         },
       });
 
+      console.log(`[Kiwi] Status: ${response.status}, Results: ${response.data.data?.length || 0}`);
+
       const data = response.data.data;
-      if (!data) return [];
+      if (!data || data.length === 0) return [];
 
       return data.map((flight: any) => ({
         airline: flight.airlines?.[0] || 'Unknown',
@@ -151,15 +160,13 @@ export class FlightService {
         flight_number: `${flight.airlines?.[0] || ''}${flight.route?.[0]?.flight_no || ''}`,
       }));
     } catch (error: any) {
-      console.error('Error in fetchKiwiFlights:', error.response?.data || error.message);
+      console.error('[Kiwi] Error:', error.response?.data || error.message);
       return [];
     }
   }
 
   async fetchFlights(from: string, to: string, quarter: string, year: number): Promise<FlightData[]> {
     try {
-      console.log(`Starting multi-provider search for ${from} -> ${to}...`);
-      
       const [amadeusFlights, kiwiFlights] = await Promise.all([
         this.fetchAmadeusFlights(from, to, quarter, year),
         this.fetchKiwiFlights(from, to, quarter, year)
@@ -168,54 +175,15 @@ export class FlightService {
       const allFlights = [...amadeusFlights, ...kiwiFlights];
 
       if (allFlights.length === 0) {
-        console.log(`No real flights found for ${from} -> ${to}.`);
+        console.log(`No flights found across all providers for ${from} -> ${to}`);
         return [];
       }
 
-      console.log(`Search complete. Total flights found: ${allFlights.length}`);
       return allFlights;
     } catch (error: any) {
-      console.error('Error in search:', error.message);
+      console.error('Fetch orchestrated error:', error.message);
       return [];
     }
-  }
-
-  private getMockFlights(from: string, to: string, quarter: string, year: number): FlightData[] {
-    console.log(`Using mock data for ${from} to ${to} in ${quarter} ${year}`);
-    return [
-      {
-        airline: "Emirates",
-        price: 45000,
-        departure: `${year}-04-12T10:00:00`,
-        arrival: `${year}-04-12T19:10:00`,
-        duration: "9h 10m",
-        flight_number: "EK511"
-      },
-      {
-        airline: "British Airways",
-        price: 48000,
-        departure: `${year}-04-13T08:00:00`,
-        arrival: `${year}-04-13T17:30:00`,
-        duration: "9h 30m",
-        flight_number: "BA256"
-      },
-      {
-        airline: "Lufthansa",
-        price: 60000,
-        departure: `${year}-04-14T11:00:00`,
-        arrival: `${year}-04-14T21:15:00`,
-        duration: "10h 15m",
-        flight_number: "LH761"
-      },
-      {
-        airline: "Virgin Atlantic",
-        price: 42000,
-        departure: `${year}-04-15T09:00:00`,
-        arrival: `${year}-04-15T18:45:00`,
-        duration: "9h 45m",
-        flight_number: "VS301"
-      }
-    ];
   }
 
   calculatePriceIntelligence(flights: FlightData[]): AnalysisOutput {
@@ -225,6 +193,8 @@ export class FlightService {
 
     const totalPrice = flights.reduce((sum, f) => sum + f.price, 0);
     const average_price = totalPrice / flights.length;
+
+    console.log(`Analysis: Total Flights: ${flights.length}, Average Price: ₹${Math.round(average_price)}`);
 
     const flights_below_average = flights
       .filter(f => f.price < average_price)
