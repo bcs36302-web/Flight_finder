@@ -109,13 +109,16 @@ export class FlightService {
       return offers.map((offer: any) => {
         const itinerary = offer.itineraries?.[0];
         const segment = itinerary?.segments?.[0];
+        // Amadeus uses carrierCode on the segment for domestic flights
+        const airlineCode = segment?.carrierCode || offer.validatingAirlineCodes?.[0] || offer.validatingCarrierCodes?.[0] || '';
+        const flightNum = segment?.number || '';
         return {
-          airline: getAirlineName(offer.validatingCarrierCodes?.[0] || ''),
+          airline: getAirlineName(airlineCode),
           price: parseFloat(offer.price.total),
           departure: segment?.departure?.at || 'N/A',
           arrival: segment?.arrival?.at || 'N/A',
-          duration: itinerary?.duration?.replace('PT', '').toLowerCase() || 'N/A',
-          flight_number: `${offer.validatingCarrierCodes?.[0] || ''}${segment?.number || ''}`,
+          duration: itinerary?.duration?.replace('PT', '').replace('H', 'h ').replace('M', 'm') || 'N/A',
+          flight_number: flightNum ? `${airlineCode} ${flightNum}` : airlineCode,
         };
       });
     } catch (error: any) {
