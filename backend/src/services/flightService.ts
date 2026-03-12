@@ -126,7 +126,7 @@ export class FlightService {
         'Q3': { from: `01/07/${year}`, to: `30/09/${year}` },
         'Q4': { from: `01/10/${year}`, to: `31/12/${year}` },
       };
-      
+
       const range = quarterRanges[quarter] || { from: `01/04/${year}`, to: `30/06/${year}` };
 
       console.log(`[Kiwi] Searching ${from} -> ${to} range: ${range.from} - ${range.to}`);
@@ -188,10 +188,10 @@ export class FlightService {
 
   private getSmartFallbackFlights(from: string, to: string, quarter: string, year: number): FlightData[] {
     const isDomestic = (from.length === 3 && to.length === 3 && ['DEL', 'BOM', 'BLR', 'MAA', 'HYD', 'CCU', 'IDR', 'PNQ'].includes(from));
-    
+
     // Realistic Indian Airlines
-    const airlines = isDomestic 
-      ? ["IndiGo", "Air India", "Vistara", "SpiceJet", "Akasa Air"] 
+    const airlines = isDomestic
+      ? ["IndiGo", "Air India", "Vistara", "SpiceJet", "Akasa Air"]
       : ["Emirates", "Qatar Airways", "Lufthansa", "Singapore Airlines", "Air India"];
 
     // Realistic Domestic Price (~₹4500-₹8500) vs International
@@ -236,12 +236,12 @@ export class FlightService {
     // If NO flights are below average (e.g. all prices identical), 
     // force at least one "deal" for demonstration if average > 0
     if (flights_below_average.length === 0 && average_price > 0) {
-        const cheapest = [...flights].sort((a,b) => a.price - b.price)[0];
-        flights_below_average.push({
-            airline: cheapest.airline,
-            price: cheapest.price,
-            percent_below: 5.0
-        });
+      const cheapest = [...flights].sort((a, b) => a.price - b.price)[0];
+      flights_below_average.push({
+        airline: cheapest.airline,
+        price: cheapest.price,
+        percent_below: 5.0
+      });
     }
 
     return {

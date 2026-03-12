@@ -33,7 +33,7 @@ function App() {
     try {
       const response = await fetch(`${BACKEND_URL}/api/flights/search`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Bypass-Tunnel-Reminder': 'true'
         },
@@ -78,10 +78,10 @@ function App() {
             <div className="input-grid">
               <div className="input-group">
                 <label>From (IATA)</label>
-                <input 
-                  type="text" 
-                  value={origin} 
-                  onChange={(e) => setOrigin(e.target.value.toUpperCase())} 
+                <input
+                  type="text"
+                  value={origin}
+                  onChange={(e) => setOrigin(e.target.value.toUpperCase())}
                   placeholder="e.g. DEL"
                   maxLength={3}
                   required
@@ -89,10 +89,10 @@ function App() {
               </div>
               <div className="input-group">
                 <label>To (IATA)</label>
-                <input 
-                  type="text" 
-                  value={destination} 
-                  onChange={(e) => setDestination(e.target.value.toUpperCase())} 
+                <input
+                  type="text"
+                  value={destination}
+                  onChange={(e) => setDestination(e.target.value.toUpperCase())}
                   placeholder="e.g. LHR"
                   maxLength={3}
                   required
@@ -137,13 +137,13 @@ function App() {
             <div className="result-header">
               <h2>Market Opportunity Analysis</h2>
               <div className="avg-price-tag">
-                Global Average: <span style={{color: '#F8FAFC', marginLeft: '0.5rem'}}>₹{results.average_price.toLocaleString()}</span>
+                Global Average: <span style={{ color: '#F8FAFC', marginLeft: '0.5rem' }}>₹{results.average_price.toLocaleString()}</span>
               </div>
             </div>
 
             {results.flights_below_average.length > 0 ? (
               results.flights_below_average.map((flight, index) => (
-                <div key={index} className="flight-card" style={{animationDelay: `${index * 0.1}s`}}>
+                <div key={index} className="flight-card" style={{ animationDelay: `${index * 0.1}s` }}>
                   <div className="airline-info">
                     <span className="airline-name">{flight.airline}</span>
                     <span className="flight-details">Professional Route Optimization Active</span>
@@ -158,8 +158,8 @@ function App() {
                 </div>
               ))
             ) : (
-              <div className="error-box" style={{backgroundColor: 'rgba(255, 255, 255, 0.05)', borderColor: 'var(--glass-border)', color: 'var(--text-dim)'}}>
-                No exceptional deals found for this specific period. 
+              <div className="error-box" style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)', borderColor: 'var(--glass-border)', color: 'var(--text-dim)' }}>
+                No exceptional deals found for this specific period.
                 Market prices are currently stable.
               </div>
             )}
@@ -169,7 +169,7 @@ function App() {
 
       <footer>
         <p>Enterprise Grade Flight Intelligence Platform</p>
-        <p style={{marginTop: '0.5rem', opacity: 0.6}}>© 2026 FlightFinder Tech. All rights reserved.</p>
+        <p style={{ marginTop: '0.5rem', opacity: 0.6 }}>© 2026 FlightFinder Tech. All rights reserved.</p>
       </footer>
     </div>
   );
