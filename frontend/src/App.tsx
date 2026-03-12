@@ -31,7 +31,7 @@ function App() {
     setResults(null);
 
     try {
-      const response = await fetch(`${BACKEND_URL}/api/flights/search`, {
+      const response = await fetch(`${BACKEND_URL}/api/search`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
