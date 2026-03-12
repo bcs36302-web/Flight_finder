@@ -28,6 +28,14 @@ function App() {
   const [results, setResults] = useState<SearchResults | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const formatDateTime = (dateStr: string) => {
+    if (!dateStr || dateStr === 'N/A') return 'N/A';
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true });
+    } catch { return dateStr; }
+  };
+
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
