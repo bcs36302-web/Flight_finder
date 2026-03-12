@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import '../index.css';
 
-const BACKEND_URL = 'https://flight-finder-qskv.onrender.com';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://flight-finder-qskv.onrender.com';
 
 interface Flight {
   airline: string;
