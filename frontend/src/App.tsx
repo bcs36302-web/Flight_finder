@@ -31,7 +31,7 @@ function App() {
     setResults(null);
 
     try {
-      const response = await fetch(`${BACKEND_URL}/api/search`, {
+      const response = await fetch(`${BACKEND_URL}/api/flights/search`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -41,7 +41,7 @@ function App() {
           from: origin,
           to: destination,
           quarter,
-          year: parseInt(year),
+          year: Number(year),
         }),
       });
 
