@@ -21,6 +21,16 @@ export interface AnalysisOutput {
   }[];
 }
 
+const AIRLINE_NAMES: Record<string, string> = {
+  '6E': 'IndiGo', 'AI': 'Air India', 'UK': 'Vistara', 'SG': 'SpiceJet',
+  'QP': 'Akasa Air', 'G8': 'Go First', 'I5': 'Air Asia India',
+  'EK': 'Emirates', 'QR': 'Qatar Airways', 'LH': 'Lufthansa',
+  'SQ': 'Singapore Airlines', 'EY': 'Etihad', 'TK': 'Turkish Airlines',
+  'BA': 'British Airways', 'AF': 'Air France', 'KL': 'KLM',
+};
+
+const getAirlineName = (code: string): string => AIRLINE_NAMES[code] || code || 'Unknown';
+
 export class FlightService {
   private accessToken: string | null = null;
   private tokenExpiry: number = 0;
@@ -100,7 +110,7 @@ export class FlightService {
         const itinerary = offer.itineraries?.[0];
         const segment = itinerary?.segments?.[0];
         return {
-          airline: offer.validatingCarrierCodes?.[0] || 'Unknown',
+          airline: getAirlineName(offer.validatingCarrierCodes?.[0] || ''),
           price: parseFloat(offer.price.total),
           departure: segment?.departure?.at || 'N/A',
           arrival: segment?.arrival?.at || 'N/A',
@@ -153,7 +163,7 @@ export class FlightService {
       if (!data || data.length === 0) return [];
 
       return data.map((flight: any) => ({
-        airline: flight.airlines?.[0] || 'Unknown',
+        airline: getAirlineName(flight.airlines?.[0] || ''),
         price: flight.price,
         departure: flight.local_departure,
         arrival: flight.local_arrival,
