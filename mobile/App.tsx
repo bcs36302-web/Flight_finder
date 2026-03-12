@@ -184,16 +184,48 @@ export default function App() {
           </TouchableOpacity>
         </View>
 
-        {/* Results Section (Optional - if needed to show below) */}
+        {/* Results Section */}
         {results && !loading && (
           <View style={styles.resultsCard}>
-            <Text style={styles.resultsTitle}>Average: ₹{results.average_price.toLocaleString()}</Text>
-            {results.flights_below_average.map((f: any, i: number) => (
-              <View key={i} style={styles.dealRow}>
-                <Text style={styles.dealText}>{f.airline}</Text>
-                <Text style={styles.dealPrice}>₹{f.price.toLocaleString()} ({f.percent_below}% OFF)</Text>
+            <View style={styles.resultsHeader}>
+              <Text style={styles.resultsTitle}>Market Opportunity Analysis</Text>
+              <View style={styles.avgBadge}>
+                <Text style={styles.avgBadgeText}>Global Avg: ₹{results.average_price?.toLocaleString()}</Text>
               </View>
-            ))}
+            </View>
+            {(results.all_flights || results.flights_below_average || []).map((f: any, i: number) => {
+              const pct = f.percent_vs_avg ?? f.percent_below ?? 0;
+              const isBelow = pct < 0;
+              const dep = f.departure && f.departure !== 'N/A' ? (() => {
+                try {
+                  const d = new Date(f.departure);
+                  return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) + ', ' + d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+                } catch { return f.departure; }
+              })() : null;
+              return (
+                <View key={i} style={[styles.flightCard, i % 2 === 0 ? styles.flightCardAlt : null]}>
+                  <View style={styles.flightLeft}>
+                    <View style={styles.flightTopRow}>
+                      <Text style={styles.flightAirline}>{f.airline}</Text>
+                      {f.flight_number ? <Text style={styles.flightNo}>{f.flight_number}</Text> : null}
+                    </View>
+                    <View style={styles.flightMeta}>
+                      {dep ? <Text style={styles.flightMetaText}>🕒 {dep}</Text> : null}
+                      {f.duration && f.duration !== 'N/A' ? <Text style={styles.flightMetaText}> • ⏳ {f.duration}</Text> : null}
+                    </View>
+                  </View>
+                  <View style={styles.flightRight}>
+                    <Text style={styles.flightPrice}>₹{f.price?.toLocaleString()}</Text>
+                    <View style={[styles.pctBadge, isBelow ? styles.pctBelow : styles.pctAbove]}>
+                      <Text style={[styles.pctBadgeText, isBelow ? styles.pctBelowText : styles.pctAboveText]}>
+                        {isBelow ? `${Math.abs(pct)}% BELOW` : `${pct}% ABOVE`}
+                      </Text>
+                    </View>
+                    <Text style={styles.flightSub}>Direct Booking</Text>
+                  </View>
+                </View>
+              );
+            })}
           </View>
         )}
 
@@ -434,20 +466,105 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     marginBottom: 15,
   },
-  dealRow: {
+  resultsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#334155',
+    alignItems: 'center',
+    marginBottom: 16,
   },
-  dealText: {
-    color: '#94A3B8',
-    fontSize: 14,
+  avgBadge: {
+    backgroundColor: '#1E3A5F',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: '#3B82F6',
   },
-  dealPrice: {
-    color: '#10B981',
+  avgBadgeText: {
+    color: '#93C5FD',
+    fontSize: 12,
     fontWeight: '700',
+  },
+  flightCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#263548',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
+  },
+  flightCardAlt: {
+    backgroundColor: '#1E2E3F',
+  },
+  flightLeft: {
+    flex: 1,
+    marginRight: 10,
+  },
+  flightTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  flightAirline: {
+    color: '#F8FAFC',
+    fontSize: 15,
+    fontWeight: '800',
+    marginRight: 6,
+  },
+  flightNo: {
+    color: '#64748B',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  flightMeta: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 4,
+  },
+  flightMetaText: {
+    color: '#94A3B8',
+    fontSize: 11,
+    marginTop: 2,
+  },
+  flightRight: {
+    alignItems: 'flex-end',
+  },
+  flightPrice: {
+    color: '#10B981',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  pctBadge: {
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginTop: 4,
+  },
+  pctBelow: {
+    backgroundColor: 'rgba(16,185,129,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(16,185,129,0.4)',
+  },
+  pctAbove: {
+    backgroundColor: 'rgba(239,68,68,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(239,68,68,0.3)',
+  },
+  pctBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  pctBelowText: {
+    color: '#10B981',
+  },
+  pctAboveText: {
+    color: '#F87171',
+  },
+  flightSub: {
+    color: '#475569',
+    fontSize: 10,
+    marginTop: 3,
   },
   // Modal Styles
   modalOverlay: {
