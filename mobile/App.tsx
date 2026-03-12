@@ -17,7 +17,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
-const BACKEND_URL = 'https://flight-finder-backend-shjdw.loca.lt'; // Stable public tunnel URL
+const BACKEND_URL = 'https://flight-finder-qskv.onrender.com'; // Permanent Render Cloud URL
 
 export default function App() {
   const [origin, setOrigin] = useState('DEL');
