@@ -181,22 +181,108 @@ export class FlightService {
 
   async fetchFlights(from: string, to: string, quarter: string, year: number): Promise<FlightData[]> {
     try {
-      const [amadeusFlights, kiwiFlights] = await Promise.all([
+      const [amadeusFlights, kiwiFlights, travelpayoutsFlights, skyFareFlights] = await Promise.all([
         this.fetchAmadeusFlights(from, to, quarter, year),
-        this.fetchKiwiFlights(from, to, quarter, year)
+        this.fetchKiwiFlights(from, to, quarter, year),
+        this.fetchTravelpayoutsFlights(from, to, quarter, year),
+        this.fetchSkyFareFlights(from, to, quarter, year),
       ]);
 
-      const allFlights = [...amadeusFlights, ...kiwiFlights];
+      const allFlights = [...amadeusFlights, ...kiwiFlights, ...travelpayoutsFlights, ...skyFareFlights];
 
       if (allFlights.length === 0) {
         console.log(`No flights found across all providers for ${from} -> ${to}. Using Smart Fallback...`);
         return this.getSmartFallbackFlights(from, to, quarter, year);
       }
 
-      return allFlights;
+      // Deduplicate by flight_number
+      const seen = new Set<string>();
+      const unique = allFlights.filter(f => {
+        const key = `${f.flight_number}-${f.departure}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
+      console.log(`Total unique flights across all providers: ${unique.length}`);
+      return unique;
     } catch (error: any) {
       console.error('Fetch orchestrated error:', error.message);
       return this.getSmartFallbackFlights(from, to, quarter, year);
+    }
+  }
+
+  private async fetchTravelpayoutsFlights(from: string, to: string, quarter: string, year: number): Promise<FlightData[]> {
+    const token = process.env.TRAVELPAYOUTS_API_KEY || 'a8ea8af540e0ed998e6d8e9548a43833';
+    try {
+      const quarterMonths: Record<string, number> = { 'Q1': 1, 'Q2': 4, 'Q3': 7, 'Q4': 10 };
+      const month = quarterMonths[quarter] || 4;
+
+      console.log(`[Travelpayouts] Searching ${from} -> ${to} for ${year}-${month}`);
+
+      const response = await axios.get('https://api.travelpayouts.com/v2/prices/month-matrix', {
+        params: {
+          origin: from,
+          destination: to,
+          month: `${year}-${String(month).padStart(2, '0')}-01`,
+          currency: 'inr',
+          show_to_affiliates: false,
+        },
+        headers: { 'X-Access-Token': token },
+      });
+
+      const data = response.data?.data;
+      console.log(`[Travelpayouts] Results: ${data?.length || 0}`);
+      if (!data || data.length === 0) return [];
+
+      return data.map((f: any) => ({
+        airline: getAirlineName(f.gate || ''),
+        price: Math.round(f.value),
+        departure: f.depart_date || 'N/A',
+        arrival: 'N/A',
+        duration: 'N/A',
+        flight_number: `${f.gate || ''}`,
+      }));
+    } catch (error: any) {
+      console.error('[Travelpayouts] Error:', error.response?.data || error.message);
+      return [];
+    }
+  }
+
+  private async fetchSkyFareFlights(from: string, to: string, quarter: string, year: number): Promise<FlightData[]> {
+    const apiKey = process.env.RAPIDAPI_KEY || '62579be96emsh283af73bdf4e68fp148e14jsn881cb386d31a';
+    try {
+      const quarterStartDates: Record<string, string> = {
+        'Q1': `${year}-01-15`, 'Q2': `${year}-04-15`,
+        'Q3': `${year}-07-15`, 'Q4': `${year}-10-15`,
+      };
+      const departureDate = quarterStartDates[quarter] || `${year}-04-15`;
+
+      console.log(`[SkyFare] Searching ${from} -> ${to} on ${departureDate}`);
+
+      const response = await axios.get('https://skyfare-api.p.rapidapi.com/v1/flights', {
+        params: { origin: from, destination: to, date: departureDate, currency: 'INR' },
+        headers: {
+          'X-RapidAPI-Key': apiKey,
+          'X-RapidAPI-Host': 'skyfare-api.p.rapidapi.com',
+        },
+      });
+
+      const data = response.data?.flights || response.data?.data || [];
+      console.log(`[SkyFare] Results: ${data.length}`);
+      if (!data || data.length === 0) return [];
+
+      return data.map((f: any) => ({
+        airline: getAirlineName(f.airline || f.carrier || ''),
+        price: Math.round(f.price || f.fare || 0),
+        departure: f.departure || f.departureTime || 'N/A',
+        arrival: f.arrival || f.arrivalTime || 'N/A',
+        duration: f.duration || 'N/A',
+        flight_number: `${f.flightNumber || f.flight_number || ''}`,
+      })).filter((f: FlightData) => f.price > 0);
+    } catch (error: any) {
+      console.error('[SkyFare] Error:', error.response?.data || error.message);
+      return [];
     }
   }
 
