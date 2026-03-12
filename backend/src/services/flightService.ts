@@ -216,38 +216,41 @@ export class FlightService {
     try {
       const quarterMonths: Record<string, number> = { 'Q1': 1, 'Q2': 4, 'Q3': 7, 'Q4': 10 };
       const month = quarterMonths[quarter] || 4;
+      const monthStr = `${year}-${String(month).padStart(2, '0')}-01`;
 
-      console.log(`[Travelpayouts] Searching ${from} -> ${to} for ${year}-${month}`);
+      console.log(`[Travelpayouts] Searching ${from} -> ${to} for ${monthStr}`);
 
-      const response = await axios.get('https://api.travelpayouts.com/v2/prices/month-matrix', {
+      const response = await axios.get('https://api.travelpayouts.com/v1/prices/cheap', {
         params: {
           origin: from,
           destination: to,
-          month: `${year}-${String(month).padStart(2, '0')}-01`,
+          depart_date: `${year}-${String(month).padStart(2, '0')}`,
           currency: 'inr',
-          show_to_affiliates: false,
+          token,
         },
-        headers: { 'X-Access-Token': token },
       });
 
-      const data = response.data?.data;
-      console.log(`[Travelpayouts] Results: ${data?.length || 0}`);
-      if (!data || data.length === 0) return [];
+      // Response: { data: { "BOM": { "0": { price, airline, flight_number, departure_at, ... } } } }
+      const destData = response.data?.data?.[to] || {};
+      const results: FlightData[] = [];
 
-      return data
-        .filter((f: any) => f.airline && f.price > 0)
-        .map((f: any) => {
-          const airlineCode = (f.airline || '').toString().toUpperCase();
-          const flightNum = f.flight_number ? String(f.flight_number) : '';
-          return {
-            airline: getAirlineName(airlineCode),
-            price: Math.round(f.price),
-            departure: f.departure_at || 'N/A',
-            arrival: 'N/A',
-            duration: 'N/A',
-            flight_number: flightNum ? `${airlineCode} ${flightNum}` : airlineCode,
-          };
+      for (const key of Object.keys(destData)) {
+        const f = destData[key];
+        if (!f || !f.airline || !f.price) continue;
+        const airlineCode = String(f.airline).toUpperCase();
+        const flightNum = f.flight_number ? String(f.flight_number) : '';
+        results.push({
+          airline: getAirlineName(airlineCode),
+          price: Math.round(f.price),
+          departure: f.departure_at || 'N/A',
+          arrival: 'N/A',
+          duration: 'N/A',
+          flight_number: flightNum ? `${airlineCode} ${flightNum}` : airlineCode,
         });
+      }
+
+      console.log(`[Travelpayouts] Parsed ${results.length} flights`);
+      return results;
     } catch (error: any) {
       console.error('[Travelpayouts] Error:', error.response?.data || error.message);
       return [];
